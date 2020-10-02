@@ -194,9 +194,17 @@ void EEVEE_occlusion_cache_init(EEVEE_ViewLayerData *sldata, EEVEE_Data *vedata)
     DRW_shgroup_uniform_int(grp, "layer", &stl->effects->ao_depth_layer, 1);
     DRW_shgroup_call(grp, quad, NULL);
 
-    DRW_PASS_CREATE(psl->gtao_blur_ps, DRW_STATE_WRITE_COLOR);
+
     const float *size = DRW_viewport_size_get();
-    grp = DRW_shgroup_create(eevee_shader_gtao_blur_get(), psl->gtao_blur_ps);
+    DRW_PASS_CREATE(psl->gtao_blurx_ps, DRW_STATE_WRITE_COLOR);
+    grp = DRW_shgroup_create(eevee_shader_gtao_blur_get(0), psl->gtao_blurx_ps);
+    DRW_shgroup_uniform_texture_ref(grp, "iChannel0", &effects->gtao_horizons_renderpass);
+    DRW_shgroup_uniform_float(grp, "resX", &size[0], 1);
+    DRW_shgroup_uniform_float(grp, "resY", &size[1], 1);
+    DRW_shgroup_call(grp, quad, NULL);
+
+    DRW_PASS_CREATE(psl->gtao_blury_ps, DRW_STATE_WRITE_COLOR);
+    grp = DRW_shgroup_create(eevee_shader_gtao_blur_get(1), psl->gtao_blury_ps);
     DRW_shgroup_uniform_texture_ref(grp, "iChannel0", &effects->gtao_horizons_renderpass);
     DRW_shgroup_uniform_float(grp, "resX", &size[0], 1);
     DRW_shgroup_uniform_float(grp, "resY", &size[1], 1);
@@ -244,7 +252,8 @@ void EEVEE_occlusion_compute(EEVEE_ViewLayerData *UNUSED(sldata),
 
     if (effects->taa_current_sample == 1 && !(effects->enabled_effects & EFFECT_TAA_REPROJECT)) {
       GPU_framebuffer_bind(fbl->gtao_blur_fb);
-      DRW_draw_pass(psl->gtao_blur_ps);
+      DRW_draw_pass(psl->gtao_blurx_ps);
+      DRW_draw_pass(psl->gtao_blury_ps);
       GPU_framebuffer_texture_detach(fbl->gtao_blur_fb, effects->gtao_horizons_renderpass);
     }
 

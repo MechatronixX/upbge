@@ -1,54 +1,57 @@
-#define SIGMA 50.0 //10.0
-#define BSIGMA 0.01 //0.1
-#define MSIZE 5 //15
-
-in vec4 uvcoordsvar;
-out vec4 fragColor;
+#define PROCESSING_TEXTURE_SHADER
 
 uniform sampler2D iChannel0;
 uniform float resX;
 uniform float resY;
+in vec4 uvcoordsvar;
+out vec4 fragColor;
 
-vec2 iResolution = vec2(resX, resY);
+// The inverse of the texture dimensions along X and Y
+vec2 texOffset = 1.0 / vec2(resX, resY);
 
-float normpdf(in float x, in float sigma)
-{
-  return 0.39894 * exp(-0.5 * x * x / (sigma * sigma)) / sigma;
-}
 
-float normpdf3(in vec3 v, in float sigma)
-{
-  return 0.39894 * exp(-0.5 * dot(v, v) / (sigma * sigma)) / sigma;
-}
+//uniform sampler2D depthBuffer;
+//vec4 effx = texture2D(depthBuffer, uvcoordsvar.xy);
+
+int blurSize = 500; //5
+uniform float sigma = 2.0;  // The sigma value for the gaussian function: higher value means more blur
+                      // A good value for 9x9 is around 3 to 5
+                      // A good value for 7x7 is around 2.5 to 4
+                      // A good value for 5x5 is around 2 to 3.5
+                      // ... play around with this based on what you need <span class="Emoticon
+                      // Emoticon1"><span>:)</span></span>
+
+const float pi = 3.14159265;
 
 void main()
 {
-  vec3 c = texture(iChannel0, uvcoordsvar.xy - (gl_FragCoord.xy / iResolution.xy)).rgb;
+  float numBlurPixelsPerSide = float(blurSize / 2);
 
-  // declare stuff
-  const int kSize = (MSIZE - 1) / 2;
-  float kernel[MSIZE];
-  vec3 final_colour = vec3(0.0);
+  vec2 blurMultiplyVec = 0 < horizontalPass ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
 
-  // create the 1-D kernel
-  float Z = 0.0;
-  for (int j = 0; j <= kSize; ++j) {
-    kernel[kSize + j] = kernel[kSize - j] = normpdf(float(j), SIGMA);
+  // Incremental Gaussian Coefficent Calculation (See GPU Gems 3 pp. 877 - 889)
+  vec3 incrementalGaussian;
+  incrementalGaussian.x = 1.0 / (sqrt(2.0 * pi) * sigma);
+  incrementalGaussian.y = exp(-0.5 / (sigma * sigma));
+  incrementalGaussian.z = incrementalGaussian.y * incrementalGaussian.y;
+
+  vec4 avgValue = vec4(0.0, 0.0, 0.0, 0.0);
+  float coefficientSum = 0.0;
+
+  // Take the central sample first...
+  avgValue += texture2D(iChannel0, uvcoordsvar.xy) * incrementalGaussian.x;
+  coefficientSum += incrementalGaussian.x;
+  incrementalGaussian.xy *= incrementalGaussian.yz;
+
+  // Go through the remaining 8 vertical samples (4 on each side of the center)
+  for (float i = 1.0; i <= numBlurPixelsPerSide; i++) {
+    avgValue += texture2D(iChannel0, uvcoordsvar.xy - i * texOffset * blurMultiplyVec) *
+                incrementalGaussian.x;
+    avgValue += texture2D(iChannel0, uvcoordsvar.xy + i * texOffset * blurMultiplyVec) *
+                incrementalGaussian.x;
+    coefficientSum += 2.0 * incrementalGaussian.x;
+    incrementalGaussian.xy *= incrementalGaussian.yz;
   }
 
-  vec3 cc;
-  float factor;
-  float bZ = 1.0 / normpdf(0.0, BSIGMA);
-  // read out the texels
-  for (int i = -kSize; i <= kSize; ++i) {
-    for (int j = -kSize; j <= kSize; ++j) {
-      cc = texture(iChannel0,
-                   uvcoordsvar.xy - (gl_FragCoord.xy + vec2(float(i), float(j))) / iResolution.xy)
-               .rgb;
-      factor = normpdf3(cc - c, BSIGMA) * bZ * kernel[kSize + j] * kernel[kSize + i];
-      Z += factor;
-      final_colour += factor * cc;
-    }
-  }
-  fragColor = vec4(final_colour / Z, 1.0);
+  fragColor = (avgValue / coefficientSum);
 }
