@@ -315,12 +315,10 @@ GPUShader *eevee_shader_antialiasing_get(int stage)
   return e_data.smaa_sh[stage];
 }
 
-GPUShader *eevee_shader_gtao_blur_get(int stage)
+GPUShader *eevee_shader_gtao_blur_get()
 {
   if (e_data.gtao_blur_sh == NULL) {
-    char stage_define[32];
-    BLI_snprintf(stage_define, sizeof(stage_define), "#define horizontalPass %d\n", stage);
-    e_data.gtao_blur_sh = DRW_shader_create_fullscreen(datatoc_effect_gtao_blur_frag_glsl, stage_define);
+    e_data.gtao_blur_sh = DRW_shader_create_fullscreen(datatoc_effect_gtao_blur_frag_glsl, NULL);
   }
   return e_data.gtao_blur_sh;
 }

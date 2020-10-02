@@ -324,8 +324,7 @@ typedef struct EEVEE_PassList {
   struct DRWPass *aa_weight_ps;
   struct DRWPass *aa_resolve_ps;
 
-  struct DRWPass *gtao_blurx_ps;
-  struct DRWPass *gtao_blury_ps;
+  struct DRWPass *gtao_blur_ps;
   /* End of Game engine transition */
 } EEVEE_PassList;
 
