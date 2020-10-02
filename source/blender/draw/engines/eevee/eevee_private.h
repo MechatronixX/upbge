@@ -323,6 +323,8 @@ typedef struct EEVEE_PassList {
   struct DRWPass *aa_edge_ps;
   struct DRWPass *aa_weight_ps;
   struct DRWPass *aa_resolve_ps;
+
+  struct DRWPass *gtao_blur_ps;
   /* End of Game engine transition */
 } EEVEE_PassList;
 
@@ -378,6 +380,8 @@ typedef struct EEVEE_FramebufferList {
   struct GPUFrameBuffer *antialiasing_fb;
   struct GPUFrameBuffer *smaa_edge_fb;
   struct GPUFrameBuffer *smaa_weight_fb;
+
+  struct GPUFrameBuffer *gtao_blur_fb;
   /* End of Game engine transition */
 } EEVEE_FramebufferList;
 
@@ -1449,6 +1453,8 @@ EEVEE_Data *EEVEE_engine_data_get(void);
 
 GPUShader *eevee_shader_antialiasing_accumulation_get(void);
 GPUShader *eevee_shader_antialiasing_get(int stage);
+GPUShader *eevee_shader_gtao_blur_get(void);
+
 int EEVEE_antialiasing_engine_init(EEVEE_Data *vedata);
 void EEVEE_antialiasing_cache_init(EEVEE_Data *vedata);
 void eevee_antialiasing_setup(EEVEE_Data *vedata);
